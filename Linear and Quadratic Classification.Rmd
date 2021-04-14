@@ -1,0 +1,155 @@
+---
+title: "Linear and Quadratic Classification"
+author: "Isabella Chittumuri "
+date: "12/2/2020"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+9.11 Do a classification analysis on the fish data in Table 6.17 as follows. Assume
+P1 =P2= P3
+
+y1 = aroma, y2 = flavor, y3 = texture, and y4 = moisture
+ 
+```{r}
+getwd()
+fish <- read.csv("fish.csv")
+head(fish)
+```
+
+(a) Find the linear classification functions.
+
+```{r}
+library(MASS)
+# Linear Discriminant Analysis
+fish.lda <- lda(method ~ ., data=fish); fish.lda
+```
+
+First and second discriminant functions are linear combinations of the four variables. These discriminants are scaled :
+
+\[ LD_1 = -0.0421*Aroma + 3.3047*Flavor - 1.8959*Texture - 0.9061*Moisture \]
+\[ LD_2 = 1.9002*Aroma - 1.8135*Flavor - 1.4591*Texture + 0.2139*Moisture \]
+
+Percentage separations achieved by the first discriminant function is 96.01%
+Percentage separations achieved by the second discriminant function is 3.99%
+  
+(b) Find the classification table using the linear classification functions in part (a) (assuming Σ1 = Σ2 = Σ3).
+
+```{r}
+# LDA Predictions
+pred <- predict(fish.lda, fish)$class
+
+# Classification table
+tt <- table(Predicted = pred, Actual = fish$method); tt
+
+# Misclassification error
+1-sum(diag(tt))/sum(tt)
+```
+
+We created predictions based on the linear classification functions and produced it's corresponding classification table. After, we found the misclassification error to be 25%.
+
+(c) Find the classification table using quadratic classification functions (assuming population covariance matrices are not equal).
+
+```{r}
+# Quadratic Discriminant Analysis
+fish.qda <- qda(method ~ ., data=fish); fish.qda
+
+# QDA Predictions 
+pred <- predict(fish.qda, fish)$class
+
+# Classification table
+tt <- table(Predicted = pred, Actual = fish$method); tt
+
+# Misclassification error
+1-sum(diag(tt))/sum(tt)
+```
+
+We created predictions based on the quadratic classification functions and produced it's corresponding classification table. After, we found the misclassification error to be 19.4%
+
+In comparison, the quadratic classification functions seemed to better predict the data than the linear classification functions, because it produced a lower misclassification error.
+
+(d) Find the classification table using linear classification functions and the holdout method.
+
+```{r}
+set.seed(555)
+ 
+# Spilt for Holdout method
+spilt <- sample(2, nrow(fish),
+              replace = T,
+              prob = c(0.5, 0.5))
+
+# Train data
+training <- fish[spilt == 1,]
+
+# LDA for Train
+train.lda <- lda(method ~ ., data=training); train.lda
+
+# Predictions for Train
+train.pred <- predict(train.lda, training)$class
+
+# Classification table
+train.table <- table(Predicted = train.pred, Actual = training$method); train.table
+
+# Misclassification error on train
+1-sum(diag(train.table))/sum(train.table)
+```
+
+We spilt the data so that 50% was in train and 50% was in test. We created predictions using the train model against the training data and produced it's corresponding classification table. After, we found the misclassification error on train to be 6.67%.
+
+```{r}
+# Test data
+testing <- fish[spilt == 2,]
+
+# Predictions for Test
+test.pred <- predict(train.lda, testing)$class
+
+# Classification table
+test.table <- table(Predicted = test.pred, Actual = testing$method); test.table
+
+# Misclassification error on test
+1-sum(diag(test.table))/sum(test.table)
+```
+
+We created predictions using the train model against the testing data and produced it's corresponding classification table. After, we found the misclassification error on test to be 42.86%. 
+
+(e) Find the classification table using a nearest neighbor method.
+
+```{r}
+library('class')
+# Even split train/test (50:50) 
+train <- fish[c(1:6, 13:18, 25:30), ]
+test <- fish[c(7:12, 19:24, 31:36), ]
+cl <- factor(c(rep("1", 6), rep("2", 6), rep("3", 6)))
+
+# Using knn=6
+knn.train <- knn(train=train, test=train, cl=cl, k=6, prob=T); knn.train
+table(knn.train)
+
+help(knn)
+
+# Error on train data
+(tt <- table(knn.train, cl))
+1-sum(diag(tt))/sum(tt) 
+```
+
+We spilt the data so that 50% was in train and 50% was in test. The square root of 36 (the number of observations) equaled 6. Therefore, we used 6 clusters for the nearest neighbor method. We created predictions using the train model against the training data and produced it's corresponding classification table. After, we found the misclassification error on train to be 11.11%
+
+```{r}
+knn.test <- knn(train=train, test=test, cl=cl, k=6, prob=F); knn.test
+table(knn.test)
+
+## error on test data
+(tt <- table(knn.test, cl))
+1-sum(diag(tt))/sum(tt) 
+```
+
+We created predictions using the train model against the testing data and produced it's corresponding classification table. After, we found the misclassification error on test to be 22.22%.
+
+With equal probability in train and test, the nearest neighbor method seemed to better predict the train data than the holdout method, because it produced a lower misclassification error on test.
+
+
